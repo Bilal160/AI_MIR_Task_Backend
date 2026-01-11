@@ -1,10 +1,29 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { getAllExcelData } from "../tools/analytics.tool";
 
+// Validate and get API key
+const getOpenAIApiKey = (): string => {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  
+  if (!apiKey) {
+    console.error("ERROR: OPENAI_API_KEY environment variable is not set!");
+    throw new Error("OpenAI API key is not configured. Please set OPENAI_API_KEY environment variable.");
+  }
+  
+  // Basic validation - OpenAI keys typically start with 'sk-'
+  if (!apiKey.startsWith('sk-')) {
+    console.warn("WARNING: OpenAI API key format may be incorrect. Keys typically start with 'sk-'");
+  }
+  
+  return apiKey;
+};
+
+const openAIApiKey = getOpenAIApiKey();
+
 const llm = new ChatOpenAI({
   modelName: "gpt-4o-mini",
   temperature: 0,
-  openAIApiKey: process.env.OPENAI_API_KEY,
+  openAIApiKey: openAIApiKey,
 });
 
 export async function HRBPAgent(question: string) {
@@ -102,8 +121,21 @@ ${JSON.stringify(excelData, null, 2)}
     return typeof response.content === "string"
       ? response.content
       : "I apologize, but I couldn't process your request. Please try rephrasing your question.";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in HRBPAgent:", error);
+    
+    // Handle specific OpenAI API key errors
+    if (error?.code === 'invalid_api_key' || error?.message?.includes('API key')) {
+      console.error("OpenAI API Key Error:", error.message);
+      return "Configuration error: Invalid OpenAI API key. Please check the OPENAI_API_KEY environment variable.";
+    }
+    
+    // Handle other OpenAI API errors
+    if (error?.type === 'invalid_request_error') {
+      console.error("OpenAI API Request Error:", error.message);
+      return "API configuration error. Please contact the administrator.";
+    }
+    
     return "An error occurred while processing your request. Please try again.";
   }
 }
