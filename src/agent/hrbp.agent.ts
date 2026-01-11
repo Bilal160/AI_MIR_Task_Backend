@@ -4,7 +4,7 @@ import { getAllExcelData } from "../tools/analytics.tool";
 const llm = new ChatOpenAI({
   modelName: "gpt-4o-mini",
   temperature: 0,
-  openAIApiKey: process.env.OPENAI_API_KEY,
+  openAIApiKey: process.env.OPENAI_API_KEY?.trim(),
 });
 
 export async function HRBPAgent(question: string) {
